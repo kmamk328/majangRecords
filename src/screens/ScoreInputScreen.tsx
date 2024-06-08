@@ -13,7 +13,7 @@ const ScoreInputScreen = () => {
     discarderPoints: '',
     isNaki: false,
     isReach: false,
-    roundNumber: { round: '1', place: '東', honba: '1' },
+    roundNumber: { round: '1', place: '東', honba: '0' },
     winner: '',
     winnerPoints: '',
     isTsumo: false,
@@ -21,11 +21,31 @@ const ScoreInputScreen = () => {
   });
   const [members, setMembers] = useState([]);
   const [rolesOptions, setRolesOptions] = useState([
-    { role: '役1', points: 1 },
-    { role: '役2', points: 2 },
-    { role: '役3', points: 3 },
-    { role: '役4', points: 4 },
-    { role: '役5', points: 5 }
+    { role: 'リーチ'                         , points: 1 },
+    { role: '一発(イッパツ)'                  , points: 1 },
+    { role: 'ツモ'                           , points: 1 },
+    { role: '平和(ピンフ)'                    , points: 1 },
+    { role: '断么九(タンヤオ)'                , points: 1 },
+    { role: '飜牌(ファンパイ)/役牌(やくはい)'  , points: 1 },
+    { role: '一盃口(イーペーコー)'            , points: 1 },
+    { role: '嶺上開花(リンシャンカイホー)'     , points: 1 },
+    { role: '槍槓(チャンカン)'                , points: 1 },
+    { role: '海底(ハイテイ)/河底(ホーテイ)'    , points: 1 },
+    { role: 'ダブルリーチ'                    , points: 1 },
+    { role: '三色同順(サンショクドウジュン)'   , points: 1 },
+    { role: '三色同刻(サンショクドウコー)'     , points: 1 },
+    { role: '一気通貫(イッキツウカン)'        , points: 1 },
+    { role: '対々和(トイトイホー)'            , points: 1 },
+    { role: '三暗刻(サンアンコー)'            , points: 1 },
+    { role: '三槓子(サンカンツ)'              , points: 1 },
+    { role: '全帯么(チャンタ)'                , points: 1 },
+    { role: '混老頭(ホンロートー)'            , points: 1 },
+    { role: '小三元(ショウサンゲン)'           , points: 1 },
+    { role: '七対子(チートイツ)'             , points: 1 },
+    { role: '二盃口(リャンペーコー)'           , points: 1 },
+    { role: '混一色(ホンイツ)'             , points: 1 },
+    { role: '純全帯么(ジュンチャンタ)'             , points: 1 },
+    { role: '清一色（チンイツ）'             , points: 1 },
   ]);
   const [availablePoints, setAvailablePoints] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   const [filteredPoints, setFilteredPoints] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -148,7 +168,7 @@ const ScoreInputScreen = () => {
       discarderPoints: '',
       isNaki: false,
       isReach: false,
-      roundNumber: { round: '1', place: '東', honba: '1' },
+      roundNumber: { round: '1', place: '東', honba: '0' },
       winner: '',
       winnerPoints: '',
       isTsumo: false,
@@ -202,34 +222,42 @@ const ScoreInputScreen = () => {
         <Text>局ごとの成績を入力してください:</Text>
         <VStack space={4} >
         <HStack space={4} >
-
-          <Select
-            selectedValue={currentRound.roundNumber.place}
-            onValueChange={(itemValue) => handleRoundNumberChange('place', itemValue)}
-            placeholder="場所"
-          >
-            {['東', '南', '西', '北'].map((place) => (
-              <Select.Item key={place} label={place} value={place} />
-            ))}
-          </Select>
-          <Select
-            selectedValue={currentRound.roundNumber.round}
-            onValueChange={(itemValue) => handleRoundNumberChange('round', itemValue)}
-            placeholder="局"
-          >
-            {[1, 2, 3, 4].map((round) => (
-              <Select.Item key={round} label={round.toString()} value={round.toString()} />
-            ))}
-          </Select>
-          <Select
-            selectedValue={currentRound.roundNumber.honba}
-            onValueChange={(itemValue) => handleRoundNumberChange('honba', itemValue)}
-            placeholder="本場"
-          >
-            {Array.from({ length: 20 }, (_, i) => i + 1).map((honba) => (
-              <Select.Item key={honba} label={honba.toString()} value={honba.toString()} />
-            ))}
-          </Select>
+          <Box width="20%">
+            <Select
+              selectedValue={currentRound.roundNumber.place}
+              onValueChange={(itemValue) => handleRoundNumberChange('place', itemValue)}
+              placeholder="場所"
+            >
+              {['東', '南', '西', '北'].map((place) => (
+                <Select.Item key={place} label={place} value={place} />
+              ))}
+            </Select>
+            </Box>
+          <Text> 場 </Text>
+          <Box width="20%">
+            <Select
+              selectedValue={currentRound.roundNumber.round}
+              onValueChange={(itemValue) => handleRoundNumberChange('round', itemValue)}
+              placeholder="局"
+            >
+              {[1, 2, 3, 4].map((round) => (
+                <Select.Item key={round} label={round.toString()} value={round.toString()} />
+              ))}
+            </Select>
+          </Box>
+          <Text> 局 </Text>
+          <Box width="20%">
+            <Select
+              selectedValue={currentRound.roundNumber.honba}
+              onValueChange={(itemValue) => handleRoundNumberChange('honba', itemValue)}
+              placeholder="本場"
+            >
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((honba) => (
+                <Select.Item key={honba} label={honba.toString()} value={honba.toString()} />
+              ))}
+            </Select>
+          </Box>
+          <Text> 本場 </Text>
           </HStack>
           <Select
             selectedValue={currentRound.winner}
@@ -248,19 +276,6 @@ const ScoreInputScreen = () => {
               <Text>リーチ:</Text>
               <Switch isChecked={isReach} onToggle={() => setIsReach(!isReach)} />
           </HStack>
-
-          {/* <Box flexDirection="row" alignItems="center">
-            <Text>ツモ:</Text>
-            <Switch isChecked={isTsumo} onToggle={() => setIsTsumo(!isTsumo)} />
-          </Box>
-          <Box flexDirection="row" alignItems="center">
-            <Text>鳴いているか:</Text>
-            <Switch isChecked={isNaki} onToggle={() => setIsNaki(!isNaki)} />
-          </Box>
-          <Box flexDirection="row" alignItems="center">
-            <Text>リーチかどうか:</Text>
-            <Switch isChecked={isReach} onToggle={() => setIsReach(!isReach)} />
-          </Box> */}
           <Select
             selectedValue={currentRound.winnerPoints}
             onValueChange={(itemValue) => handleChange('winnerPoints', itemValue)}
@@ -296,7 +311,7 @@ const ScoreInputScreen = () => {
                       margin={1}
                       onPress={() => toggleRoleSelection(roleObj.role)}
                     >
-                      {roleObj.role} ({roleObj.points}点)
+                      {roleObj.role}
                     </Button>
                   ))}
                 </ScrollView>
@@ -308,20 +323,23 @@ const ScoreInputScreen = () => {
           </Modal>
           {!isTsumo && (
             <VStack space={4}>
-              <Text>放銃した人:</Text>
-              <TextInput
-                value={discarder}
-                onChangeText={setDiscarder}
-                placeholder="放銃した人"
-                style={{ borderBottomWidth: 1, marginVertical: 8 }}
-              />
+            <Select
+              selectedValue={currentRound.winner}
+              onValueChange={(itemValue) => handleChange('discarder', itemValue)}
+              placeholder="放銃した人"
+            >
+              {members.map((member) => (
+                <Select.Item key={member.id} label={member.name} value={member.id} />
+              ))}
+            </Select>
+
             </VStack>
           )}
-          <VStack space={4} mt={4}>
+          <HStack space={4} alignItems="center">
             <Button onPress={handlePrevious}>前へ</Button>
-            <Button onPress={handleNext}>次へ</Button>
             <Button onPress={handleFinish}>終了</Button>
-          </VStack>
+            <Button onPress={handleNext}>次へ</Button>
+          </HStack>
         </VStack>
       </Box>
     </ScrollView>
