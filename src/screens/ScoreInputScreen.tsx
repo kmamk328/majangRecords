@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { ScrollView } from 'native-base';
-import { TextInput, StyleSheet } from 'react-native';
-
-import { View, VStack, Text, Button, Modal, Box, Select, Switch, HStack } from 'native-base';
+import { StyleSheet } from 'react-native';
+import { View, VStack, Text, Button, Modal, Box, Select, Switch, HStack, AlertDialog, Checkbox } from 'native-base';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { db } from '../../firebaseConfig';
 import { getFirestore, collection, addDoc, doc, updateDoc, getDoc, getDocs, query, orderBy } from 'firebase/firestore';
@@ -17,38 +16,38 @@ const ScoreInputScreen = () => {
     winner: '',
     winnerPoints: '',
     isTsumo: false,
+    isOya: false, // 親かどうかの状態を追加
     roles: []
   });
   const [members, setMembers] = useState([]);
   const [rolesOptions, setRolesOptions] = useState([
-    { role: 'リーチ'                         , points: 1 },
-    { role: '一発(イッパツ)'                  , points: 1 },
-    { role: 'ツモ'                           , points: 1 },
-    { role: '平和(ピンフ)'                    , points: 1 },
-    { role: '断么九(タンヤオ)'                , points: 1 },
-    { role: '飜牌(ファンパイ)/役牌(やくはい)'  , points: 1 },
-    { role: '一盃口(イーペーコー)'            , points: 1 },
-    { role: '嶺上開花(リンシャンカイホー)'     , points: 1 },
-    { role: '槍槓(チャンカン)'                , points: 1 },
-    { role: '海底(ハイテイ)/河底(ホーテイ)'    , points: 1 },
-    { role: 'ダブルリーチ'                    , points: 1 },
-    { role: '三色同順(サンショクドウジュン)'   , points: 1 },
-    { role: '三色同刻(サンショクドウコー)'     , points: 1 },
-    { role: '一気通貫(イッキツウカン)'        , points: 1 },
-    { role: '対々和(トイトイホー)'            , points: 1 },
-    { role: '三暗刻(サンアンコー)'            , points: 1 },
-    { role: '三槓子(サンカンツ)'              , points: 1 },
-    { role: '全帯么(チャンタ)'                , points: 1 },
-    { role: '混老頭(ホンロートー)'            , points: 1 },
-    { role: '小三元(ショウサンゲン)'           , points: 1 },
-    { role: '七対子(チートイツ)'             , points: 1 },
-    { role: '二盃口(リャンペーコー)'           , points: 1 },
-    { role: '混一色(ホンイツ)'             , points: 1 },
-    { role: '純全帯么(ジュンチャンタ)'             , points: 1 },
-    { role: '清一色（チンイツ）'             , points: 1 },
+    { role: 'リーチ', points: 1 },
+    { role: '一発(イッパツ)', points: 1 },
+    { role: 'ツモ', points: 1 },
+    { role: '平和(ピンフ)', points: 1 },
+    { role: '断么九(タンヤオ)', points: 1 },
+    { role: '飜牌(ファンパイ)/役牌(やくはい)', points: 1 },
+    { role: '一盃口(イーペーコー)', points: 1 },
+    { role: '嶺上開花(リンシャンカイホー)', points: 1 },
+    { role: '槍槓(チャンカン)', points: 1 },
+    { role: '海底(ハイテイ)/河底(ホーテイ)', points: 1 },
+    { role: 'ダブルリーチ', points: 1 },
+    { role: '三色同順(サンショクドウジュン)', points: 1 },
+    { role: '三色同刻(サンショクドウコー)', points: 1 },
+    { role: '一気通貫(イッキツウカン)', points: 1 },
+    { role: '対々和(トイトイホー)', points: 1 },
+    { role: '三暗刻(サンアンコー)', points: 1 },
+    { role: '三槓子(サンカンツ)', points: 1 },
+    { role: '全帯么(チャンタ)', points: 1 },
+    { role: '混老頭(ホンロートー)', points: 1 },
+    { role: '小三元(ショウサンゲン)', points: 1 },
+    { role: '七対子(チートイツ)', points: 1 },
+    { role: '二盃口(リャンペーコー)', points: 1 },
+    { role: '混一色(ホンイツ)', points: 1 },
+    { role: '純全帯么(ジュンチャンタ)', points: 1 },
+    { role: '清一色（チンイツ）', points: 1 },
   ]);
-  const [availablePoints, setAvailablePoints] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  const [filteredPoints, setFilteredPoints] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const [availablePoints, setAvailablePoints] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
@@ -62,11 +61,13 @@ const ScoreInputScreen = () => {
   const [discarder, setDiscarder] = useState('');
   const [discarderPoints, setDiscarderPoints] = useState('');
   const firestore = getFirestore();
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const cancelRef = useRef(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerStyle: {
-        backgroundColor: '#E0F8E0',
+        backgroundColor: '#FFFFFF',
       },
       headerTintColor: '#000',
       headerTitle: 'スコア入力',
@@ -101,6 +102,10 @@ const ScoreInputScreen = () => {
     fetchRounds();
   }, [gameId]);
 
+  useEffect(() => {
+    updateAvailablePoints();
+  }, [isTsumo, currentRound.isOya]);
+
   const handleChange = (key, value) => {
     setCurrentRound({ ...currentRound, [key]: value });
   };
@@ -131,13 +136,43 @@ const ScoreInputScreen = () => {
 
     let newFilteredPoints = availablePoints;
     if (totalPoints >= 2) {
-      newFilteredPoints = newFilteredPoints.filter(point => point >= 2000);
+      newFilteredPoints = newFilteredPoints.filter(point => point >= 2);
     }
     if (totalPoints >= 4) {
-      newFilteredPoints = newFilteredPoints.filter(point => point >= 8000);
+      newFilteredPoints = newFilteredPoints.filter(point => point >= 4);
     }
 
-    setFilteredPoints(newFilteredPoints);
+    setAvailablePoints(newFilteredPoints);
+  };
+
+  const updateAvailablePoints = () => {
+    let points = [];
+    if (currentRound.isOya && isTsumo) {
+      points = [
+        500, 700, 800, 1000, 1200, 1300, 1500, 1600, 2000, 2300, 2600,
+        2900, 3200, 3600, 4000, 6000, 8000, 12000, 16000, 32000
+      ].map(p => `${p}オール`);
+    } else if (currentRound.isOya && !isTsumo) {
+      points = [
+        1500, 2000, 2400, 2900, 3400, 3900, 4400, 4800, 5300, 5800, 6800,
+        7700, 8700, 9600, 10600, 12000, 18000, 24000, 36000, 48000, 96000
+      ];
+    } else if (!currentRound.isOya && isTsumo) {
+      points = [
+        '子(300) 親(500)', '子(400) 親(700)', '子(400) 親(800)', '子(500) 親(1000)',
+        '子(600) 親(1200)', '子(700) 親(1300)', '子(800) 親(1500)', '子(800) 親(1600)',
+        '子(1000) 親(1600)', '子(1000) 親(2000)', '子(1200) 親(2300)', '子(1300) 親(2600)',
+        '子(1500) 親(2900)', '子(1600) 親(3200)', '子(1800) 親(3600)', '子(2000) 親(3900)',
+        '子(2000) 親(4000)', '子(3000) 親(6000)', '子(4000) 親(8000)', '子(8000) 親(16000)',
+        '子(16000) 親(32000)'
+      ];
+    } else {
+      points = [
+        1300, 1600, 2000, 2300, 2600, 2900, 3200, 3600, 3900, 4500, 5200,
+        5800, 6400, 7100, 7700, 8000, 12000, 16000, 24000, 32000, 64000
+      ];
+    }
+    setAvailablePoints(points);
   };
 
   const handleNext = async () => {
@@ -172,6 +207,7 @@ const ScoreInputScreen = () => {
       winner: '',
       winnerPoints: '',
       isTsumo: false,
+      isOya: false, // 初期化
       roles: []
     });
     setIsTsumo(false);
@@ -180,23 +216,7 @@ const ScoreInputScreen = () => {
     setDiscarder('');
     setDiscarderPoints('');
     setSelectedRoles([]);
-
-    try {
-      await setDoc(doc(firestore, "games", gameId, "rounds", "currentRound"), {
-        ...currentRound,
-        isTsumo: isTsumo,
-        isNaki: isNaki,
-        isReach: isReach,
-        discarder: discarder,
-        discarderPoints: discarderPoints,
-        roles: selectedRoles // 役を保存
-      });
-      console.log("Round data saved successfully!");
-    } catch (error) {
-      console.error("Error saving round data: ", error);
-    }
-
-    navigation.push('ScoreInput', { gameId });
+    setIsAlertOpen(true);
   };
 
   const handlePrevious = () => {
@@ -216,72 +236,86 @@ const ScoreInputScreen = () => {
     setModalVisible(false);
   };
 
+  const handleAlertClose = () => {
+    setIsAlertOpen(false);
+  };
+
   return (
     <ScrollView flex={1}>
       <Box flex={1} justifyContent="center" padding={4}>
         <Text>局ごとの成績を入力してください:</Text>
-        <VStack space={4} >
-        <HStack space={4} >
-          <Box width="20%">
-            <Select
-              selectedValue={currentRound.roundNumber.place}
-              onValueChange={(itemValue) => handleRoundNumberChange('place', itemValue)}
-              placeholder="場所"
-            >
-              {['東', '南', '西', '北'].map((place) => (
-                <Select.Item key={place} label={place} value={place} />
-              ))}
-            </Select>
+        <VStack space={4}>
+          <HStack space={4}>
+            <Box width="20%">
+              <Select
+                selectedValue={currentRound.roundNumber.place}
+                onValueChange={(itemValue) => handleRoundNumberChange('place', itemValue)}
+                placeholder="場所"
+              >
+                {['東', '南', '西', '北'].map((place) => (
+                  <Select.Item key={place} label={place} value={place} />
+                ))}
+              </Select>
             </Box>
-          <Text> 場 </Text>
-          <Box width="20%">
-            <Select
-              selectedValue={currentRound.roundNumber.round}
-              onValueChange={(itemValue) => handleRoundNumberChange('round', itemValue)}
-              placeholder="局"
-            >
-              {[1, 2, 3, 4].map((round) => (
-                <Select.Item key={round} label={round.toString()} value={round.toString()} />
-              ))}
-            </Select>
-          </Box>
-          <Text> 局 </Text>
-          <Box width="20%">
-            <Select
-              selectedValue={currentRound.roundNumber.honba}
-              onValueChange={(itemValue) => handleRoundNumberChange('honba', itemValue)}
-              placeholder="本場"
-            >
-              {Array.from({ length: 20 }, (_, i) => i + 1).map((honba) => (
-                <Select.Item key={honba} label={honba.toString()} value={honba.toString()} />
-              ))}
-            </Select>
-          </Box>
-          <Text> 本場 </Text>
+            <Text> 場 </Text>
+            <Box width="20%">
+              <Select
+                selectedValue={currentRound.roundNumber.round}
+                onValueChange={(itemValue) => handleRoundNumberChange('round', itemValue)}
+                placeholder="局"
+              >
+                {[1, 2, 3, 4].map((round) => (
+                  <Select.Item key={round} label={round.toString()} value={round.toString()} />
+                ))}
+              </Select>
+            </Box>
+            <Text> 局 </Text>
+            <Box width="20%">
+              <Select
+                selectedValue={currentRound.roundNumber.honba}
+                onValueChange={(itemValue) => handleRoundNumberChange('honba', itemValue)}
+                placeholder="本場"
+              >
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((honba) => (
+                  <Select.Item key={honba} label={honba.toString()} value={honba.toString()} />
+                ))}
+              </Select>
+            </Box>
+            <Text> 本場 </Text>
           </HStack>
-          <Select
-            selectedValue={currentRound.winner}
-            onValueChange={(itemValue) => handleChange('winner', itemValue)}
-            placeholder="あがった人"
-          >
-            {members.map((member) => (
-              <Select.Item key={member.id} label={member.name} value={member.id} />
-            ))}
-          </Select>
           <HStack space={4} alignItems="center">
-              <Text>ツモ:</Text>
-              <Switch isChecked={isTsumo} onToggle={() => setIsTsumo(!isTsumo)} />
-              <Text>鳴き:</Text>
-              <Switch isChecked={isNaki} onToggle={() => setIsNaki(!isNaki)} />
-              <Text>リーチ:</Text>
-              <Switch isChecked={isReach} onToggle={() => setIsReach(!isReach)} />
+            <Box width="70%">
+              <Select
+                selectedValue={currentRound.winner}
+                onValueChange={(itemValue) => handleChange('winner', itemValue)}
+                placeholder="あがった人"
+              >
+                {members.map((member) => (
+                  <Select.Item key={member.id} label={member.name} value={member.id} />
+                ))}
+              </Select>
+            </Box>
+            <Checkbox
+              isChecked={currentRound.isOya}
+              onChange={(value) => setCurrentRound({ ...currentRound, isOya: value })}
+            >
+              親
+            </Checkbox>
+          </HStack>
+          <HStack space={4} alignItems="center">
+            <Text>ツモ:</Text>
+            <Switch isChecked={isTsumo} onToggle={() => setIsTsumo(!isTsumo)} />
+            <Text>鳴き:</Text>
+            <Switch isChecked={isNaki} onToggle={() => setIsNaki(!isNaki)} />
+            <Text>リーチ:</Text>
+            <Switch isChecked={isReach} onToggle={() => setIsReach(!isReach)} />
           </HStack>
           <Select
             selectedValue={currentRound.winnerPoints}
             onValueChange={(itemValue) => handleChange('winnerPoints', itemValue)}
             placeholder="あがり点"
           >
-            {filteredPoints.map((point, index) => (
+            {availablePoints.map((point, index) => (
               <Select.Item key={index} label={point.toString()} value={point.toString()} />
             ))}
           </Select>
@@ -323,16 +357,15 @@ const ScoreInputScreen = () => {
           </Modal>
           {!isTsumo && (
             <VStack space={4}>
-            <Select
-              selectedValue={currentRound.winner}
-              onValueChange={(itemValue) => handleChange('discarder', itemValue)}
-              placeholder="放銃した人"
-            >
-              {members.map((member) => (
-                <Select.Item key={member.id} label={member.name} value={member.id} />
-              ))}
-            </Select>
-
+              <Select
+                selectedValue={currentRound.discarder}
+                onValueChange={(itemValue) => handleChange('discarder', itemValue)}
+                placeholder="放銃した人"
+              >
+                {members.map((member) => (
+                  <Select.Item key={member.id} label={member.name} value={member.id} />
+                ))}
+              </Select>
             </VStack>
           )}
           <HStack space={4} alignItems="center">
@@ -342,8 +375,27 @@ const ScoreInputScreen = () => {
           </HStack>
         </VStack>
       </Box>
+      <AlertDialog leastDestructiveRef={cancelRef} isOpen={isAlertOpen} onClose={handleAlertClose}>
+        <AlertDialog.Content>
+          <AlertDialog.Header>保存成功</AlertDialog.Header>
+          <AlertDialog.Body>データが保存されました。</AlertDialog.Body>
+          <AlertDialog.Footer>
+            <Button onPress={handleAlertClose}>OK</Button>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog>
     </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingLeft: 10
+  }
+});
 
 export default ScoreInputScreen;
