@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { ScrollView } from 'native-base';
-import { StyleSheet } from 'react-native';
+import { TextInput, StyleSheet } from 'react-native';
 import { View, VStack, Text, Button, Modal, Box, Select, Switch, HStack, AlertDialog, Checkbox } from 'native-base';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { db } from '../../firebaseConfig';
@@ -16,7 +16,7 @@ const ScoreInputScreen = () => {
     winner: '',
     winnerPoints: '',
     isTsumo: false,
-    isOya: false, // 親かどうかの状態を追加
+    isOya: false,
     roles: []
   });
   const [members, setMembers] = useState([]);
@@ -61,10 +61,10 @@ const ScoreInputScreen = () => {
   const [isReach, setIsReach] = useState(false);
   const [discarder, setDiscarder] = useState('');
   const [discarderPoints, setDiscarderPoints] = useState('');
-  const firestore = getFirestore();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [previousRoundInfo, setPreviousRoundInfo] = useState('開局');
   const cancelRef = useRef(null);
+  const firestore = getFirestore();
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -177,39 +177,78 @@ const ScoreInputScreen = () => {
     setAvailablePoints(points);
   };
 
+
   const handleNext = async () => {
-    try {
-      const roundsRef = collection(db, 'games', gameId, 'rounds');
-      await addDoc(roundsRef, {
-        ...currentRound,
-        isTsumo: isTsumo,
-        isNaki: isNaki,
-        isReach: isReach,
-        discarder: discarder,
-        discarderPoints: discarderPoints,
-        roles: selectedRoles, // 役を保存
-        isOya: currentRound.isOya // 親かどうかを保存
-      });
+    const roundsRef = collection(db, 'games', gameId, 'rounds');
+    await addDoc(roundsRef, {
+      ...currentRound,
+      isTsumo: isTsumo,
+      isNaki: isNaki,
+      isReach: isReach,
+      discarder: discarder,
+      discarderPoints: discarderPoints,
+      roles: selectedRoles,
+      isOya: currentRound.isOya
+    });
 
-      if (currentRound.winner) {
-        const winnerRef = doc(db, 'members', currentRound.winner);
-        await updateDoc(winnerRef, {
-          totalPoints: (await getDoc(winnerRef)).data().totalPoints + parseInt(currentRound.winnerPoints, 10)
-        });
-      }
+    const winnerRef = doc(db, 'members', currentRound.winner);
+    const discarderRef = doc(db, 'members', discarder);
 
-      if (discarder) {
-        const discarderRef = doc(db, 'members', discarder);
-        await updateDoc(discarderRef, {
-          totalPoints: (await getDoc(discarderRef)).data().totalPoints - parseInt(discarderPoints, 10)
-        });
-      }
+    await updateDoc(winnerRef, {
+      totalPoints: (await getDoc(winnerRef)).data().totalPoints + parseInt(currentRound.winnerPoints, 10)
+    });
 
-      setIsAlertOpen(true);
-      
-    } catch (error) {
-      console.error("Error saving round data: ", error);
-    }
+    await updateDoc(discarderRef, {
+      totalPoints: (await getDoc(discarderRef)).data().totalPoints - parseInt(discarderPoints, 10)
+    });
+
+    // アラートを表示して画面をクリアする
+    // setIsAlertOpen(true); // Alertを表示
+
+    // setCurrentRound({
+    //   discarder: '',
+    //   discarderPoints: '',
+    //   isNaki: false,
+    //   isReach: false,
+    //   roundNumber: { round: '1', place: '東', honba: '0' },
+    //   winner: '',
+    //   winnerPoints: '',
+    //   isTsumo: false,
+    //   isOya: false,
+    //   roles: []
+    // });
+    // setIsTsumo(false);
+    // setIsNaki(false);
+    // setIsReach(false);
+    // setDiscarder('');
+    // setDiscarderPoints('');
+    // setSelectedRoles([]);
+  };
+
+  // const handleAlertClose = () => {
+  //   setIsAlertOpen(false);
+  //   navigation.navigate('ScoreInput', { gameId: route.params?.gameId });
+  // };
+  const handleAlertClose = () => {
+    setIsAlertOpen(false);
+    setCurrentRound({
+      discarder: '',
+      discarderPoints: '',
+      isNaki: false,
+      isReach: false,
+      roundNumber: { round: '1', place: '東', honba: '0' },
+      winner: '',
+      winnerPoints: '',
+      isTsumo: false,
+      isOya: false,
+      roles: []
+    });
+    setIsTsumo(false);
+    setIsNaki(false);
+    setIsReach(false);
+    setDiscarder('');
+    setDiscarderPoints('');
+    setSelectedRoles([]);
   };
 
   const handlePrevious = () => {
@@ -224,8 +263,6 @@ const ScoreInputScreen = () => {
       setPreviousRoundInfo('開局');
     }
   };
-
-
   const handleFinish = () => {
     navigation.navigate('Result', { gameId });
   };
@@ -235,54 +272,18 @@ const ScoreInputScreen = () => {
     setModalVisible(false);
   };
 
-  const handleAlertClose = () => {
-    setIsAlertOpen(false);
-    navigation.navigate('ScoreInput', { gameId }, { animation: 'slide_from_right' });
-    setCurrentRound({
-      discarder: '',
-      discarderPoints: '',
-      isNaki: false,
-      isReach: false,
-      roundNumber: { round: '1', place: '東', honba: '0' },
-      winner: '',
-      winnerPoints: '',
-      isTsumo: false,
-      isOya: false, // 初期化
-      roles: []
-    });
-    setIsTsumo(false);
-    setIsNaki(false);
-    setIsReach(false);
-    setDiscarder('');
-    setDiscarderPoints('');
-    setSelectedRoles([]);
-    setPreviousRoundInfo(fetchPreviousRoundInfo()); // 前のラウンド情報を更新
-  };
-
   const handleOyaChange = (value) => {
     setCurrentRound({ ...currentRound, isOya: value });
     updateFilteredPoints(selectedRoles, isTsumo, value);
   };
-
-
-  const fetchPreviousRoundInfo = () => {
-    const previousRound = rounds[currentRoundIndex];
-    if (previousRound) {
-        const { place, round, honba } = previousRound.roundNumber;
-        return `＜${place}場${round}局${honba}本場`;
-    }
-    return "開局";
-};
-
-  // const previousRoundInfo = fetchPreviousRoundInfo();
 
   return (
     <ScrollView flex={1}>
       <Box flex={1} justifyContent="center" padding={4}>
       <Text>{previousRoundInfo}</Text>
         <Text>局ごとの成績を入力してください:</Text>
-        <VStack space={4}>
-          <HStack space={4}>
+        <VStack space={4} >
+          <HStack space={4} >
             <Box width="20%">
               <Select
                 selectedValue={currentRound.roundNumber.place}
@@ -321,7 +322,7 @@ const ScoreInputScreen = () => {
             <Text> 本場 </Text>
           </HStack>
           <HStack space={4} alignItems="center">
-            <Box width="80%">
+            <Box flex={1}>
               <Select
                 selectedValue={currentRound.winner}
                 onValueChange={(itemValue) => handleChange('winner', itemValue)}
@@ -407,19 +408,19 @@ const ScoreInputScreen = () => {
             </VStack>
           )}
           <HStack space={4} alignItems="center">
-            <Box width="30%">
-              <Button onPress={handlePrevious}>前へ</Button>
-            </Box>
-            <Box width="30%">
-              <Button onPress={handleFinish}>終了</Button>
-            </Box>
-            <Box width="30%">
-              <Button onPress={handleNext}>次へ</Button>
-            </Box>
+          <Box width="30%">
+            <Button onPress={handlePrevious}>前へ</Button>
+          </Box>
+          <Box width="30%">
+            <Button onPress={handleFinish}>終了</Button>
+          </Box>
+          <Box width="30%">
+            <Button onPress={handleNext}>次へ</Button>
+          </Box>
           </HStack>
         </VStack>
-      </Box>
-      <AlertDialog leastDestructiveRef={cancelRef} isOpen={isAlertOpen} onClose={handleAlertClose}>
+        </Box>
+        <AlertDialog leastDestructiveRef={cancelRef} isOpen={isAlertOpen} onClose={handleAlertClose}>
         <AlertDialog.Content>
           <AlertDialog.Header>保存成功</AlertDialog.Header>
           <AlertDialog.Body>データが保存されました。</AlertDialog.Body>
@@ -438,8 +439,8 @@ const styles = StyleSheet.create({
     borderColor: 'gray',
     borderWidth: 1,
     marginBottom: 10,
-    paddingHorizontal: 10,
-  },
+    paddingLeft: 10
+  }
 });
 
 export default ScoreInputScreen;
