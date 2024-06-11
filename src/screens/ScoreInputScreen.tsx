@@ -47,7 +47,8 @@ const ScoreInputScreen = () => {
     { role: '純全帯么(ジュンチャンタ)', points: 1 },
     { role: '清一色（チンイツ）', points: 1 },
   ]);
-  const [availablePoints, setAvailablePoints] = useState([]);
+  const [availablePoints, setAvailablePoints] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const [filteredPoints, setFilteredPoints] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
@@ -102,10 +103,6 @@ const ScoreInputScreen = () => {
     fetchRounds();
   }, [gameId]);
 
-  useEffect(() => {
-    updateAvailablePoints();
-  }, [isTsumo, currentRound.isOya]);
-
   const handleChange = (key, value) => {
     setCurrentRound({ ...currentRound, [key]: value });
   };
@@ -142,81 +139,41 @@ const ScoreInputScreen = () => {
       newFilteredPoints = newFilteredPoints.filter(point => point >= 4);
     }
 
-    setAvailablePoints(newFilteredPoints);
-  };
-
-  const updateAvailablePoints = () => {
-    let points = [];
-    if (currentRound.isOya && isTsumo) {
-      points = [
-        500, 700, 800, 1000, 1200, 1300, 1500, 1600, 2000, 2300, 2600,
-        2900, 3200, 3600, 4000, 6000, 8000, 12000, 16000, 32000
-      ].map(p => `${p}オール`);
-    } else if (currentRound.isOya && !isTsumo) {
-      points = [
-        1500, 2000, 2400, 2900, 3400, 3900, 4400, 4800, 5300, 5800, 6800,
-        7700, 8700, 9600, 10600, 12000, 18000, 24000, 36000, 48000, 96000
-      ];
-    } else if (!currentRound.isOya && isTsumo) {
-      points = [
-        '子(300) 親(500)', '子(400) 親(700)', '子(400) 親(800)', '子(500) 親(1000)',
-        '子(600) 親(1200)', '子(700) 親(1300)', '子(800) 親(1500)', '子(800) 親(1600)',
-        '子(1000) 親(1600)', '子(1000) 親(2000)', '子(1200) 親(2300)', '子(1300) 親(2600)',
-        '子(1500) 親(2900)', '子(1600) 親(3200)', '子(1800) 親(3600)', '子(2000) 親(3900)',
-        '子(2000) 親(4000)', '子(3000) 親(6000)', '子(4000) 親(8000)', '子(8000) 親(16000)',
-        '子(16000) 親(32000)'
-      ];
-    } else {
-      points = [
-        1300, 1600, 2000, 2300, 2600, 2900, 3200, 3600, 3900, 4500, 5200,
-        5800, 6400, 7100, 7700, 8000, 12000, 16000, 24000, 32000, 64000
-      ];
-    }
-    setAvailablePoints(points);
+    setFilteredPoints(newFilteredPoints);
   };
 
   const handleNext = async () => {
-    const roundsRef = collection(db, 'games', gameId, 'rounds');
-    await addDoc(roundsRef, {
-      ...currentRound,
-      isTsumo: isTsumo,
-      isNaki: isNaki,
-      isReach: isReach,
-      discarder: discarder,
-      discarderPoints: discarderPoints,
-      roles: selectedRoles // 役を保存
-    });
+    try {
+      const roundsRef = collection(db, 'games', gameId, 'rounds');
+      await addDoc(roundsRef, {
+        ...currentRound,
+        isTsumo: isTsumo,
+        isNaki: isNaki,
+        isReach: isReach,
+        discarder: discarder,
+        discarderPoints: discarderPoints,
+        roles: selectedRoles, // 役を保存
+        isOya: currentRound.isOya // 親かどうかを保存
+      });
 
-    const winnerRef = doc(db, 'members', currentRound.winner);
-    const discarderRef = doc(db, 'members', discarder);
+      if (currentRound.winner) {
+        const winnerRef = doc(db, 'members', currentRound.winner);
+        await updateDoc(winnerRef, {
+          totalPoints: (await getDoc(winnerRef)).data().totalPoints + parseInt(currentRound.winnerPoints, 10)
+        });
+      }
 
-    await updateDoc(winnerRef, {
-      totalPoints: (await getDoc(winnerRef)).data().totalPoints + parseInt(currentRound.winnerPoints, 10)
-    });
+      if (discarder) {
+        const discarderRef = doc(db, 'members', discarder);
+        await updateDoc(discarderRef, {
+          totalPoints: (await getDoc(discarderRef)).data().totalPoints - parseInt(discarderPoints, 10)
+        });
+      }
 
-    await updateDoc(discarderRef, {
-      totalPoints: (await getDoc(discarderRef)).data().totalPoints - parseInt(discarderPoints, 10)
-    });
-
-    setCurrentRound({
-      discarder: '',
-      discarderPoints: '',
-      isNaki: false,
-      isReach: false,
-      roundNumber: { round: '1', place: '東', honba: '0' },
-      winner: '',
-      winnerPoints: '',
-      isTsumo: false,
-      isOya: false, // 初期化
-      roles: []
-    });
-    setIsTsumo(false);
-    setIsNaki(false);
-    setIsReach(false);
-    setDiscarder('');
-    setDiscarderPoints('');
-    setSelectedRoles([]);
-    setIsAlertOpen(true);
+      setIsAlertOpen(true);
+    } catch (error) {
+      console.error("Error saving round data: ", error);
+    }
   };
 
   const handlePrevious = () => {
@@ -238,6 +195,24 @@ const ScoreInputScreen = () => {
 
   const handleAlertClose = () => {
     setIsAlertOpen(false);
+    setCurrentRound({
+      discarder: '',
+      discarderPoints: '',
+      isNaki: false,
+      isReach: false,
+      roundNumber: { round: '1', place: '東', honba: '0' },
+      winner: '',
+      winnerPoints: '',
+      isTsumo: false,
+      isOya: false, // 初期化
+      roles: []
+    });
+    setIsTsumo(false);
+    setIsNaki(false);
+    setIsReach(false);
+    setDiscarder('');
+    setDiscarderPoints('');
+    setSelectedRoles([]);
   };
 
   return (
@@ -284,7 +259,7 @@ const ScoreInputScreen = () => {
             <Text> 本場 </Text>
           </HStack>
           <HStack space={4} alignItems="center">
-            <Box width="70%">
+            <Box width="80%">
               <Select
                 selectedValue={currentRound.winner}
                 onValueChange={(itemValue) => handleChange('winner', itemValue)}
@@ -315,7 +290,7 @@ const ScoreInputScreen = () => {
             onValueChange={(itemValue) => handleChange('winnerPoints', itemValue)}
             placeholder="あがり点"
           >
-            {availablePoints.map((point, index) => (
+            {filteredPoints.map((point, index) => (
               <Select.Item key={index} label={point.toString()} value={point.toString()} />
             ))}
           </Select>
@@ -394,8 +369,8 @@ const styles = StyleSheet.create({
     borderColor: 'gray',
     borderWidth: 1,
     marginBottom: 10,
-    paddingLeft: 10
-  }
+    paddingHorizontal: 10,
+  },
 });
 
 export default ScoreInputScreen;
