@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MemberInputScreen from './src/screens/MemberInputScreen';
 import ScoreInputScreen from './src/screens/ScoreInputScreen';
 import ResultScreen from './src/screens/ResultScreen';
+import InquireScreen from './src/screens/InquireScreen';
 import { View, Text } from 'react-native';
 // import MemberInputScreen from './src/components/MemberInputScreen';
 // import ScoreInputScreen from './src/components/ScoreInputScreen';
@@ -45,17 +46,17 @@ export default function App() {
     <NavigationContainer>
       <Tab.Navigator>
         <Tab.Screen
-            name="Tab1"
-            children={() => <PlaceholderScreen text="Tab 1" />}
+            name="戦歴"
+            component={InquireScreen}
             options={{ headerShown: false }} // タブナビゲーションのヘッダーを非表示に設定
           />
           <Tab.Screen
-            name="Main"
+            name="記録"
             component={MainStackNavigator}
             options={{ headerShown: false }} // タブナビゲーションのヘッダーを非表示に設定
           />
           <Tab.Screen
-            name="Result"
+            name="結果"
             component={ResultScreen}
             options={{ headerShown: false }} // タブナビゲーションのヘッダーを非表示に設定
           />
